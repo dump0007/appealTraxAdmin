@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "up": "npx pm2 start vite --name vite-dev",
-    "down": "npx pm2 stop vite-dev && npx pm2 delete vite-dev",
+    "up": "npx pm2 start vite --name admin-dev",
+    "down": "npx pm2 stop admin-dev && npx pm2 delete admin-dev",
     "lint": "eslint .",
     "preview": "vite preview"
   },

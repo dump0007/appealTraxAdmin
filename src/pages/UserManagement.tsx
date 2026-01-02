@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { fetchAllUsers, createUser, updateUser, deleteUser, fetchAdminCount } from '../lib/adminApi'
+import { fetchAllUsers, createUser, updateUser, deleteUser, fetchAdminCount, fetchAllBranches } from '../lib/adminApi'
 import type { User, UserRole } from '../types'
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([])
   const [adminCount, setAdminCount] = useState<number>(0)
+  const [branches, setBranches] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -24,7 +25,17 @@ export default function UserManagement() {
   useEffect(() => {
     loadUsers()
     loadAdminCount()
+    loadBranches()
   }, [])
+
+  async function loadBranches() {
+    try {
+      const branchList = await fetchAllBranches()
+      setBranches(branchList)
+    } catch (err) {
+      console.error('Failed to load branches:', err)
+    }
+  }
 
   async function loadUsers() {
     try {
@@ -110,7 +121,7 @@ export default function UserManagement() {
     return true
   })
 
-  const branches = Array.from(new Set(users.map((u) => u.branch).filter(Boolean)))
+  const uniqueBranches = Array.from(new Set(users.map((u) => u.branch).filter(Boolean)))
 
   if (loading) {
     return (
@@ -165,7 +176,7 @@ export default function UserManagement() {
             className="rounded-lg border px-3 py-2"
           >
             <option value="">All Branches</option>
-            {branches.map((branch) => (
+            {uniqueBranches.map((branch) => (
               <option key={branch} value={branch}>
                 {branch}
               </option>
@@ -272,13 +283,19 @@ export default function UserManagement() {
               </div>
               <div>
                 <label className="block text-sm font-medium">Branch</label>
-                <input
-                  type="text"
+                <select
                   value={formData.branch}
                   onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
                   className="w-full rounded-lg border px-3 py-2"
                   required
-                />
+                >
+                  <option value="">Select Branch</option>
+                  {branches.map((branch) => (
+                    <option key={branch} value={branch}>
+                      {branch}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="mt-6 flex gap-4">
@@ -350,13 +367,19 @@ export default function UserManagement() {
               </div>
               <div>
                 <label className="block text-sm font-medium">Branch</label>
-                <input
-                  type="text"
+                <select
                   value={formData.branch}
                   onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
                   className="w-full rounded-lg border px-3 py-2"
                   required
-                />
+                >
+                  <option value="">Select Branch</option>
+                  {branches.map((branch) => (
+                    <option key={branch} value={branch}>
+                      {branch}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="mt-6 flex gap-4">

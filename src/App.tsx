@@ -12,7 +12,9 @@ import EditProceeding from './pages/EditProceeding'
 import NotFound from './pages/NotFound'
 import UserManagement from './pages/UserManagement'
 import AuditLogs from './pages/AuditLogs'
+import UserLogs from './pages/UserLogs'
 import ConfigManagement from './pages/ConfigManagement'
+import BranchManagement from './pages/BranchManagement'
 
 export default function App() {
   return (
@@ -36,7 +38,9 @@ export default function App() {
         <Route path="proceedings/:proceedingId" element={<ProceedingDetail />} />
         <Route path="proceedings/:proceedingId/edit" element={<EditProceeding />} />
         <Route path="admin/users" element={<UserManagement />} />
+        <Route path="admin/branches" element={<BranchManagement />} />
         <Route path="admin/audit-logs" element={<AuditLogs />} />
+        <Route path="admin/user-logs" element={<UserLogs />} />
         <Route path="admin/config" element={<ConfigManagement />} />
       </Route>
       <Route path="*" element={<NotFound />} />

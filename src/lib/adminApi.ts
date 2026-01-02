@@ -146,6 +146,30 @@ export async function fetchAuditLogs(filters?: {
   return request<AuditLog[]>(`/v1/admin/audit-logs${queryString ? `?${queryString}` : ''}`)
 }
 
+export async function fetchUserActivityLogs(filters?: {
+  userEmail?: string
+  branch?: string
+  action?: string
+  resourceType?: string
+  startDate?: string
+  endDate?: string
+  limit?: number
+  skip?: number
+}) {
+  const params = new URLSearchParams()
+  if (filters?.userEmail) params.append('userEmail', filters.userEmail)
+  if (filters?.branch) params.append('branch', filters.branch)
+  if (filters?.action) params.append('action', filters.action)
+  if (filters?.resourceType) params.append('resourceType', filters.resourceType)
+  if (filters?.startDate) params.append('startDate', filters.startDate)
+  if (filters?.endDate) params.append('endDate', filters.endDate)
+  if (filters?.limit) params.append('limit', filters.limit.toString())
+  if (filters?.skip) params.append('skip', filters.skip.toString())
+
+  const queryString = params.toString()
+  return request<AuditLog[]>(`/v1/admin/user-logs${queryString ? `?${queryString}` : ''}`)
+}
+
 // Config
 export async function fetchConfig() {
   return request<SystemConfig[]>('/v1/admin/config')
@@ -155,6 +179,35 @@ export async function updateConfig(key: string, value: any, description?: string
   return request<SystemConfig>('/v1/admin/config', {
     method: 'PUT',
     body: JSON.stringify({ key, value, description }),
+  })
+}
+
+// Branch Management
+export async function fetchAllBranches() {
+  return request<string[]>('/v1/admin/branches')
+}
+
+export async function createBranch(name: string) {
+  return request<string[]>('/v1/admin/branches', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  })
+}
+
+export async function updateBranch(oldName: string, newName: string) {
+  return request<string[]>('/v1/admin/branches/' + encodeURIComponent(oldName), {
+    method: 'PUT',
+    body: JSON.stringify({ name: newName }),
+  })
+}
+
+export async function checkBranchDeletion(name: string) {
+  return request<{ firCount: number; proceedingCount: number }>('/v1/admin/branches/' + encodeURIComponent(name) + '/check-deletion')
+}
+
+export async function deleteBranch(name: string) {
+  return request<{ message: string }>('/v1/admin/branches/' + encodeURIComponent(name), {
+    method: 'DELETE',
   })
 }
 

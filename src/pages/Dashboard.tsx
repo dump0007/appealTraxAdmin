@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { fetchAllFIRs, fetchAllProceedings, fetchAdminDashboardMetrics, fetchAdminCityGraph, fetchAdminWritTypeDistribution, fetchAdminMotionMetrics, fetchAdminAffidavitMetrics } from '../lib/adminApi'
+import { fetchAllFIRs, fetchAllProceedings, fetchAdminDashboardMetrics, fetchAdminCityGraph, fetchAdminWritTypeDistribution, fetchAdminMotionMetrics, fetchAdminAffidavitMetrics, fetchAllBranches } from '../lib/adminApi'
 import { useAuthStore, useApiCacheStore } from '../store'
 import type { AffidavitDashboardMetrics, FIR, FIRCityBreakdown, FIRDashboardMetrics, MotionDashboardMetrics, WritTypeDistribution, Proceeding } from '../types'
 
@@ -48,43 +48,91 @@ export default function Dashboard() {
   const [proceedingEvents, setProceedingEvents] = useState<ProceedingEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
+  
+  // Filter states
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
+  const [branch, setBranch] = useState<string>('')
+  const [branches, setBranches] = useState<string[]>([])
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  // Compute active filter count
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (startDate) count++
+    if (endDate) count++
+    if (branch) count++
+    return count
+  }, [startDate, endDate, branch])
 
   const handleCreateFIR = () => {
     navigate('/firs?create=true')
   }
+  
+  const handleClearFilters = () => {
+    setStartDate('')
+    setEndDate('')
+    setBranch('')
+  }
+  
+  const toggleFilters = () => {
+    setFiltersOpen(!filtersOpen)
+  }
+  
+  // Load branches on mount
+  useEffect(() => {
+    async function loadBranches() {
+      try {
+        const data = await fetchAllBranches()
+        setBranches(data)
+      } catch (err) {
+        console.error('Failed to load branches:', err)
+      }
+    }
+    loadBranches()
+  }, [])
 
   useEffect(() => {
     let active = true
 
     async function loadDashboard() {
       try {
-        const cache = useApiCacheStore.getState()
-        // Check cache first for instant loading
-        const cachedFirs = cache.getCachedFirs()
-        const cachedMetrics = cache.getCachedDashboard()
-        const cachedCityGraph = cache.getCachedCityGraph()
+        // Build filters object
+        const filters: { startDate?: string; endDate?: string; branch?: string } = {}
+        if (startDate) filters.startDate = startDate
+        if (endDate) filters.endDate = endDate
+        if (branch) filters.branch = branch
 
-        if (cachedFirs) {
-          setFirs(cachedFirs)
-          setLoading(false) // Show cached data immediately
-        }
-        if (cachedMetrics) {
-          setMetrics(cachedMetrics)
-        }
-        if (cachedCityGraph) {
-          setCityGraph(cachedCityGraph)
+        // Only use cache if no filters are applied
+        if (!startDate && !endDate && !branch) {
+          const cache = useApiCacheStore.getState()
+          // Check cache first for instant loading
+          const cachedFirs = cache.getCachedFirs()
+          const cachedMetrics = cache.getCachedDashboard()
+          const cachedCityGraph = cache.getCachedCityGraph()
+
+          if (cachedFirs) {
+            setFirs(cachedFirs)
+            setLoading(false) // Show cached data immediately
+          }
+          if (cachedMetrics) {
+            setMetrics(cachedMetrics)
+          }
+          if (cachedCityGraph) {
+            setCityGraph(cachedCityGraph)
+          }
         }
 
         // Fetch fresh data in the background using admin endpoints
         setLoading(true)
         const [firData, proceedingsData, dashboardData, cityData, motionData, affidavitData, writTypeData] = await Promise.all([
-          fetchAllFIRs(),
-          fetchAllProceedings(),
-          fetchAdminDashboardMetrics(),
-          fetchAdminCityGraph(),
-          fetchAdminMotionMetrics(),
-          fetchAdminAffidavitMetrics(),
-          fetchAdminWritTypeDistribution(),
+          fetchAllFIRs(filters),
+          fetchAllProceedings(filters),
+          fetchAdminDashboardMetrics(filters),
+          fetchAdminCityGraph(filters),
+          fetchAdminMotionMetrics(filters),
+          fetchAdminAffidavitMetrics(filters),
+          fetchAdminWritTypeDistribution(filters),
         ])
         if (!active) {
           return
@@ -114,7 +162,7 @@ export default function Dashboard() {
     return () => {
       active = false
     }
-  }, [user?.email])
+  }, [user?.email, startDate, endDate, branch])
 
   useEffect(() => {
     if (firs.length === 0) return
@@ -287,9 +335,186 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-        <button className="btn-primary" onClick={handleCreateFIR}>
-          + New Writ Application
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Filter Toggle Button */}
+          <button
+            onClick={toggleFilters}
+            className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+              activeFilterCount > 0
+                ? 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+              />
+            </svg>
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-xs font-semibold text-white">
+                {activeFilterCount}
+              </span>
+            )}
+            <svg
+              className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+          <button className="btn-primary" onClick={handleCreateFIR}>
+            + New Writ Application
+          </button>
+        </div>
+      </div>
+
+      {/* Collapsible Filter Section */}
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          filtersOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <label className="mb-1 flex items-center gap-1 text-sm font-medium text-gray-700">
+                <svg
+                  className="h-4 w-4 text-gray-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="mb-1 flex items-center gap-1 text-sm font-medium text-gray-700">
+                <svg
+                  className="h-4 w-4 text-gray-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                End Date
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="mb-1 flex items-center gap-1 text-sm font-medium text-gray-700">
+                <svg
+                  className="h-4 w-4 text-gray-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
+                </svg>
+                Branch
+              </label>
+              <select
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="">All Branches</option>
+                {branches.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={handleClearFilters}
+                  className="flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          </div>
+          {activeFilterCount > 0 && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-gray-600">
+              <span className="font-medium">Active filters:</span>
+              {startDate && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-700">
+                  Start: {startDate}
+                </span>
+              )}
+              {endDate && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-700">
+                  End: {endDate}
+                </span>
+              )}
+              {branch && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-700">
+                  Branch: {branch}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -298,75 +523,97 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Top tile area (3 rows x 2) + Affidavit bar graph */}
+      {/* Top tile area with Total Writs + 6 compact tiles + Affidavit bar graph */}
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 grid gap-4 sm:grid-cols-2">
-        <MetricCard 
-          label="Filed Affidavit" 
-          value={totalCases} 
-          loading={loading}
-          icon={
-            <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          }
-          borderColor="indigo"
-        />
-        <MetricCard 
-          label="Pending Affidavit" 
-          value={pendingCases} 
-          loading={loading}
-          icon={
-            <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          }
-          borderColor="indigo"
-        />
-        <MetricCard 
-          label="Overdue Affidavit" 
-          value={affidavitMetrics?.overdue ?? 0} 
-          loading={loading}
-          icon={
-            <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          }
-          borderColor="indigo"
-        />
-        <MetricCard 
-          label="Filed Motion" 
-          value={motionMetrics?.filed ?? 0} 
-          loading={loading}
-          icon={
-            <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-            </svg>
-          }
-          borderColor="teal"
-        />
-        <MetricCard 
-          label="Pending Motion" 
-          value={motionMetrics?.pending ?? 0} 
-          loading={loading}
-          icon={
-            <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-            </svg>
-          }
-          borderColor="teal"
-        />
-        <MetricCard 
-          label="Overdue Motion" 
-          value={motionMetrics?.overdue ?? 0} 
-          loading={loading}
-          icon={
-            <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-            </svg>
-          }
-          borderColor="teal"
-        />
+        <div className="lg:col-span-2 grid gap-4">
+          {/* Total Writs Tile - Full Width */}
+          <MetricCard 
+            label="Total Number of Writs" 
+            value={statusTotals} 
+            loading={loading}
+            icon={
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            }
+            borderColor="purple"
+          />
+          
+          {/* Compact Tiles Grid - 2 columns */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <MetricCard 
+              label="Filed Affidavit" 
+              value={totalCases} 
+              loading={loading}
+              compact={true}
+              icon={
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              }
+              borderColor="indigo"
+            />
+            <MetricCard 
+              label="Pending Affidavit" 
+              value={pendingCases} 
+              loading={loading}
+              compact={true}
+              icon={
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              }
+              borderColor="indigo"
+            />
+            <MetricCard 
+              label="Overdue Affidavit" 
+              value={affidavitMetrics?.overdue ?? 0} 
+              loading={loading}
+              compact={true}
+              icon={
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              }
+              borderColor="indigo"
+            />
+            <MetricCard 
+              label="Filed Motion" 
+              value={motionMetrics?.filed ?? 0} 
+              loading={loading}
+              compact={true}
+              icon={
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                </svg>
+              }
+              borderColor="teal"
+            />
+            <MetricCard 
+              label="Pending Motion" 
+              value={motionMetrics?.pending ?? 0} 
+              loading={loading}
+              compact={true}
+              icon={
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                </svg>
+              }
+              borderColor="teal"
+            />
+            <MetricCard 
+              label="Overdue Motion" 
+              value={motionMetrics?.overdue ?? 0} 
+              loading={loading}
+              compact={true}
+              icon={
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                </svg>
+              }
+              borderColor="teal"
+            />
+          </div>
         </div>
         <div className="card-soft p-6">
           <h2 className="mb-1 text-lg font-semibold text-gray-900">Affidavit Status Graph</h2>
@@ -1045,6 +1292,7 @@ function MetricCard({
   icon,
   borderColor = 'indigo',
   bgTint,
+  compact = false,
 }: {
   label: string
   value: number
@@ -1052,6 +1300,7 @@ function MetricCard({
   icon?: React.ReactNode
   borderColor?: 'indigo' | 'teal' | 'purple'
   bgTint?: string
+  compact?: boolean
 }) {
   const borderColorMap = {
     indigo: 'border-l-indigo-600',
@@ -1065,22 +1314,40 @@ function MetricCard({
     purple: 'text-purple-600',
   }
 
+  const padding = compact ? 'p-3' : 'p-4'
+  const iconSize = compact ? 'h-6 w-6' : 'h-8 w-8'
+  const valueSize = compact ? 'text-2xl' : 'text-3xl'
+
+  // Clone icon with appropriate size if it's an SVG element, preserving existing classes
+  const sizedIcon = icon && React.isValidElement(icon) 
+    ? (() => {
+        const existingClassName = (icon as React.ReactElement<any>).props?.className || ''
+        // Replace existing size classes and add the correct size
+        const mergedClassName = existingClassName
+          .replace(/\b(h-\d+|w-\d+)\b/g, '') // Remove existing h-* and w-* classes
+          .trim()
+        return React.cloneElement(icon as React.ReactElement<any>, {
+          className: `${mergedClassName} ${iconSize}`.trim()
+        })
+      })()
+    : icon
+
   return (
     <div 
-      className={`rounded-xl border-l-4 border bg-white p-4 shadow-sm ${borderColorMap[borderColor]}`}
+      className={`rounded-xl border-l-4 border bg-white ${padding} shadow-sm ${borderColorMap[borderColor]}`}
       style={bgTint ? { backgroundColor: bgTint } : undefined}
     >
       <div className="flex items-center justify-between">
         <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
           {label}
         </div>
-        {icon && (
+        {sizedIcon && (
           <div className="text-gray-400">
-            {icon}
+            {sizedIcon}
           </div>
         )}
       </div>
-      <div className={`mt-2 text-3xl font-semibold ${textColorMap[borderColor]}`}>
+      <div className={`mt-2 ${valueSize} font-semibold ${textColorMap[borderColor]}`}>
         {loading ? '—' : value}
       </div>
     </div>

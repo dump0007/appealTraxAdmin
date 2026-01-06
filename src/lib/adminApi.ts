@@ -86,12 +86,22 @@ export async function deleteUser(id: string) {
 }
 
 // Data Access
-export async function fetchAllFIRs() {
-  return request<FIR[]>('/v1/admin/firs')
+export async function fetchAllFIRs(filters?: { startDate?: string; endDate?: string; branch?: string }) {
+  const params = new URLSearchParams()
+  if (filters?.startDate) params.append('startDate', filters.startDate)
+  if (filters?.endDate) params.append('endDate', filters.endDate)
+  if (filters?.branch) params.append('branch', filters.branch)
+  const queryString = params.toString()
+  return request<FIR[]>(`/v1/admin/firs${queryString ? `?${queryString}` : ''}`)
 }
 
-export async function fetchAllProceedings() {
-  return request<Proceeding[]>('/v1/admin/proceedings')
+export async function fetchAllProceedings(filters?: { startDate?: string; endDate?: string; branch?: string }) {
+  const params = new URLSearchParams()
+  if (filters?.startDate) params.append('startDate', filters.startDate)
+  if (filters?.endDate) params.append('endDate', filters.endDate)
+  if (filters?.branch) params.append('branch', filters.branch)
+  const queryString = params.toString()
+  return request<Proceeding[]>(`/v1/admin/proceedings${queryString ? `?${queryString}` : ''}`)
 }
 
 // Analytics
@@ -103,24 +113,49 @@ export async function fetchDashboardAnalytics() {
   return request<AdminDashboardMetrics>('/v1/admin/analytics/dashboard')
 }
 
-export async function fetchAdminDashboardMetrics() {
-  return request<any>('/v1/admin/dashboard-metrics')
+export async function fetchAdminDashboardMetrics(filters?: { startDate?: string; endDate?: string; branch?: string }) {
+  const params = new URLSearchParams()
+  if (filters?.startDate) params.append('startDate', filters.startDate)
+  if (filters?.endDate) params.append('endDate', filters.endDate)
+  if (filters?.branch) params.append('branch', filters.branch)
+  const queryString = params.toString()
+  return request<any>(`/v1/admin/dashboard-metrics${queryString ? `?${queryString}` : ''}`)
 }
 
-export async function fetchAdminCityGraph() {
-  return request<Array<{ branch: string; count: number }>>('/v1/admin/city-graph')
+export async function fetchAdminCityGraph(filters?: { startDate?: string; endDate?: string; branch?: string }) {
+  const params = new URLSearchParams()
+  if (filters?.startDate) params.append('startDate', filters.startDate)
+  if (filters?.endDate) params.append('endDate', filters.endDate)
+  if (filters?.branch) params.append('branch', filters.branch)
+  const queryString = params.toString()
+  return request<Array<{ branch: string; count: number }>>(`/v1/admin/city-graph${queryString ? `?${queryString}` : ''}`)
 }
 
-export async function fetchAdminWritTypeDistribution() {
-  return request<Array<{ type: string; count: number }>>('/v1/admin/writ-type-distribution')
+export async function fetchAdminWritTypeDistribution(filters?: { startDate?: string; endDate?: string; branch?: string }) {
+  const params = new URLSearchParams()
+  if (filters?.startDate) params.append('startDate', filters.startDate)
+  if (filters?.endDate) params.append('endDate', filters.endDate)
+  if (filters?.branch) params.append('branch', filters.branch)
+  const queryString = params.toString()
+  return request<Array<{ type: string; count: number }>>(`/v1/admin/writ-type-distribution${queryString ? `?${queryString}` : ''}`)
 }
 
-export async function fetchAdminMotionMetrics() {
-  return request<{ filed: number; pending: number; overdue: number }>('/v1/admin/motion-metrics')
+export async function fetchAdminMotionMetrics(filters?: { startDate?: string; endDate?: string; branch?: string }) {
+  const params = new URLSearchParams()
+  if (filters?.startDate) params.append('startDate', filters.startDate)
+  if (filters?.endDate) params.append('endDate', filters.endDate)
+  if (filters?.branch) params.append('branch', filters.branch)
+  const queryString = params.toString()
+  return request<{ filed: number; pending: number; overdue: number }>(`/v1/admin/motion-metrics${queryString ? `?${queryString}` : ''}`)
 }
 
-export async function fetchAdminAffidavitMetrics() {
-  return request<{ filed: number; pending: number; overdue: number }>('/v1/admin/affidavit-metrics')
+export async function fetchAdminAffidavitMetrics(filters?: { startDate?: string; endDate?: string; branch?: string }) {
+  const params = new URLSearchParams()
+  if (filters?.startDate) params.append('startDate', filters.startDate)
+  if (filters?.endDate) params.append('endDate', filters.endDate)
+  if (filters?.branch) params.append('branch', filters.branch)
+  const queryString = params.toString()
+  return request<{ filed: number; pending: number; overdue: number }>(`/v1/admin/affidavit-metrics${queryString ? `?${queryString}` : ''}`)
 }
 
 // Audit Logs

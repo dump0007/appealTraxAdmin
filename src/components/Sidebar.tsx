@@ -122,6 +122,7 @@ export default function Sidebar({ isOpen = true }: SidebarProps) {
                   </svg>
                   Branch Management
                 </NavLink>
+                {/* Audit Logs tab hidden - commented out temporarily
                 <NavLink
                   to="/admin/audit-logs"
                   className={({ isActive }) =>
@@ -137,6 +138,8 @@ export default function Sidebar({ isOpen = true }: SidebarProps) {
                   </svg>
                   Audit Logs
                 </NavLink>
+                */}
+                {/* User Logs tab hidden - commented out temporarily
                 <NavLink
                   to="/admin/user-logs"
                   className={({ isActive }) =>
@@ -152,6 +155,8 @@ export default function Sidebar({ isOpen = true }: SidebarProps) {
                   </svg>
                   User Logs
                 </NavLink>
+                */}
+                {/* System Config tab hidden - commented out temporarily
                 <NavLink
                   to="/admin/config"
                   className={({ isActive }) =>
@@ -168,6 +173,7 @@ export default function Sidebar({ isOpen = true }: SidebarProps) {
                   </svg>
                   System Config
                 </NavLink>
+                */}
               </>
             )}
           </div>

@@ -61,7 +61,9 @@ export default function UserManagement() {
 
   async function handleCreate() {
     try {
-      await createUser(formData)
+      // Normalize email to lowercase - password remains case-sensitive
+      const normalizedEmail = formData.email.toLowerCase().trim()
+      await createUser({ ...formData, email: normalizedEmail })
       setShowCreateModal(false)
       setFormData({ email: '', password: '', role: 'USER', branch: '' })
       await loadUsers()
@@ -73,7 +75,9 @@ export default function UserManagement() {
   async function handleUpdate() {
     if (!selectedUser) return
     try {
-      await updateUser(selectedUser._id, formData)
+      // Normalize email to lowercase - password remains case-sensitive
+      const normalizedEmail = formData.email.toLowerCase().trim()
+      await updateUser(selectedUser._id, { ...formData, email: normalizedEmail })
       setShowEditModal(false)
       setSelectedUser(null)
       setFormData({ email: '', password: '', role: 'USER', branch: '' })
@@ -105,8 +109,9 @@ export default function UserManagement() {
 
   function openEditModal(user: User) {
     setSelectedUser(user)
+    // Normalize email for display consistency (already stored in lowercase, but ensure it)
     setFormData({
-      email: user.email,
+      email: user.email?.toLowerCase().trim() || user.email,
       password: '',
       role: user.role,
       branch: user.branch,

@@ -96,6 +96,7 @@ export default function EditProceeding() {
     },
   })
   const [orderOfProceedingFile, setOrderOfProceedingFile] = useState<File | null>(null)
+  const [orderOfProceedingRemoved, setOrderOfProceedingRemoved] = useState(false)
   const [noticeOfMotionFiles, setNoticeOfMotionFiles] = useState<Map<number, File>>(new Map())
   const [replyTrackingFiles, setReplyTrackingFiles] = useState<Map<number, File>>(new Map())
   const [argumentFiles, setArgumentFiles] = useState<Map<number, File>>(new Map())
@@ -123,6 +124,7 @@ export default function EditProceeding() {
         setLoading(true)
         const proceeding = await fetchProceedingDetail(proceedingId)
         setOriginalProceedingData(proceeding)
+        setOrderOfProceedingRemoved(false)
         
         const firId = typeof proceeding.fir === 'object' ? proceeding.fir._id : proceeding.fir
         if (!firId) {
@@ -1185,6 +1187,7 @@ export default function EditProceeding() {
                                 onClick={() => {
                                   if (existingFile) {
                                     setFilesToDelete(prev => [...prev, existingFile])
+                            updateNoticeOfMotionEntry(index, 'attachment', undefined)
                                   }
                                 }}
                                 className="rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
@@ -1460,6 +1463,7 @@ export default function EditProceeding() {
                                   onClick={() => {
                                     if (existingFile) {
                                       setFilesToDelete(prev => [...prev, existingFile])
+                                    updateNoticeOfMotionEntry(index, 'attachment', undefined)
                                     }
                                   }}
                                   className="rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
@@ -1610,6 +1614,12 @@ export default function EditProceeding() {
                                   onClick={() => {
                                     if (existingFile) {
                                       setFilesToDelete(prev => [...prev, existingFile])
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      argumentDetails: (prev.argumentDetails || []).map((entry, idx) =>
+                                        idx === index ? { ...entry, attachment: undefined } : entry
+                                      ),
+                                    }))
                                     }
                                   }}
                                   className="rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
@@ -1800,6 +1810,7 @@ export default function EditProceeding() {
                                   onClick={() => {
                                     if (existingFile) {
                                       setFilesToDelete(prev => [...prev, existingFile])
+                                    updateAnyOtherEntry(index, 'attachment', undefined)
                                     }
                                   }}
                                   className="rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
@@ -1955,7 +1966,7 @@ export default function EditProceeding() {
                       </button>
                     </div>
                   )}
-                  {originalProceedingData?.orderOfProceedingFilename && !orderOfProceedingFile && (
+                  {originalProceedingData?.orderOfProceedingFilename && !orderOfProceedingFile && !orderOfProceedingRemoved && (
                     <div className="mt-2 flex items-center gap-2 rounded-md border border-gray-300 bg-gray-50 px-3 py-2">
                       <span className="text-sm text-gray-700">Current file:</span>
                       <span className="flex-1 text-sm font-medium text-gray-900">{originalProceedingData.orderOfProceedingFilename}</span>
@@ -1964,6 +1975,7 @@ export default function EditProceeding() {
                         onClick={() => {
                           if (originalProceedingData.orderOfProceedingFilename) {
                             setFilesToDelete(prev => [...prev, originalProceedingData.orderOfProceedingFilename!])
+                            setOrderOfProceedingRemoved(true)
                           }
                         }}
                         className="rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
@@ -1981,6 +1993,13 @@ export default function EditProceeding() {
                         onClick={() => {
                           if (originalProceedingData.decisionDetails?.attachment) {
                             setFilesToDelete(prev => [...prev, originalProceedingData.decisionDetails!.attachment!])
+                            setFormData((prev) => ({
+                              ...prev,
+                              decisionDetails: {
+                                ...prev.decisionDetails,
+                                attachment: undefined,
+                              },
+                            }))
                           }
                         }}
                         className="rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"

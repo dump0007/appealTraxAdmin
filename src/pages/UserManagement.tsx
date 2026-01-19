@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchAllUsers, createUser, updateUser, deleteUser, fetchAdminCount, fetchAllBranches } from '../lib/adminApi'
 import type { User, UserRole } from '../types'
+import { toastError, toast } from '../lib/toast'
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([])
@@ -47,6 +48,7 @@ export default function UserManagement() {
       setBranches(branchList)
     } catch (err) {
       console.error('Failed to load branches:', err)
+      toastError(err, 'Failed to load branches')
     }
   }
 
@@ -57,7 +59,7 @@ export default function UserManagement() {
       setUsers(data)
       setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load users')
+      toastError(err, 'Failed to load users')
     } finally {
       setLoading(false)
     }
@@ -80,8 +82,9 @@ export default function UserManagement() {
       setShowCreateModal(false)
       setFormData({ email: '', password: '', role: 'USER', branch: '' })
       await loadUsers()
+      toast.success('User created')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create user')
+      toastError(err, 'Failed to create user')
     }
   }
 
@@ -106,7 +109,7 @@ export default function UserManagement() {
       if (message.toLowerCase().includes('branch')) {
         setBranchError(message)
       } else {
-        setError(message)
+        toastError(err, 'Failed to update user')
       }
     }
   }
@@ -116,7 +119,7 @@ export default function UserManagement() {
     if (!userToDelete) return
 
     if (userToDelete.role === 'ADMIN' && adminCount <= 1) {
-      setError('Cannot delete the last admin. At least one admin must exist.')
+      toast.error('Cannot delete the last admin. At least one admin must exist.')
       return
     }
 
@@ -126,7 +129,7 @@ export default function UserManagement() {
       await loadUsers()
       await loadAdminCount()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete user')
+      toastError(err, 'Failed to delete user')
     }
   }
 

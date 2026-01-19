@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchAllBranches, createBranch, updateBranch, checkBranchDeletion, deleteBranch } from '../lib/adminApi'
+import { toastError } from '../lib/toast'
 
 export default function BranchManagement() {
   const [branches, setBranches] = useState<string[]>([])
@@ -23,7 +24,7 @@ export default function BranchManagement() {
       setBranches(data)
       setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load branches')
+      toastError(err, 'Failed to load branches')
     } finally {
       setLoading(false)
     }
@@ -40,7 +41,7 @@ export default function BranchManagement() {
       setNewBranchName('')
       await loadBranches()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create branch')
+      toastError(err, 'Failed to create branch')
     }
   }
 
@@ -70,7 +71,7 @@ export default function BranchManagement() {
       setEditBranchName('')
       await loadBranches()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update branch')
+      toastError(err, 'Failed to update branch')
     }
   }
 
@@ -82,7 +83,7 @@ export default function BranchManagement() {
       setDeletingBranch(branch)
       setShowDeleteConfirm(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to check deletion impact')
+      toastError(err, 'Failed to check deletion impact')
     }
   }
 
@@ -96,7 +97,7 @@ export default function BranchManagement() {
       setShowDeleteConfirm(false)
       await loadBranches()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete branch')
+      toastError(err, 'Failed to delete branch')
     }
   }
 

@@ -7,6 +7,7 @@ import type {
   Proceeding,
 } from '../types'
 import { useAuthStore } from '../store'
+import { ApiError } from './errors'
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3000'
@@ -19,7 +20,7 @@ function getAuthToken(): string | null {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAuthToken()
   if (!token) {
-    throw new Error('Authentication required. Please login again.')
+    throw new ApiError('Authentication required. Please login again.', { status: 401 })
   }
 
   const headers: Record<string, string> = {
@@ -35,17 +36,20 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    const message = errorData.message || `Request failed with status ${response.status}`
+    const errorData = await response.json().catch(() => ({} as any))
+    const message = (errorData as any)?.message || `Request failed with status ${response.status}`
     
     if (response.status === 401 || response.status === 403) {
       const { logout } = useAuthStore.getState()
       logout()
       window.location.href = '/login'
-      throw new Error('Authentication required. Please login again.')
+      throw new ApiError('Authentication required. Please login again.', {
+        status: response.status,
+        data: errorData,
+      })
     }
     
-    throw new Error(message)
+    throw new ApiError(message, { status: response.status, data: errorData })
   }
 
   return response.json()

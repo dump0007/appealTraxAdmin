@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { fetchAllFIRs, fetchAllProceedings, fetchAdminDashboardMetrics, fetchAdminCityGraph, fetchAdminWritTypeDistribution, fetchAdminMotionMetrics, fetchAdminAffidavitMetrics, fetchAllBranches } from '../lib/adminApi'
 import { useAuthStore, useApiCacheStore } from '../store'
 import type { AffidavitDashboardMetrics, FIR, FIRCityBreakdown, FIRDashboardMetrics, MotionDashboardMetrics, WritTypeDistribution, Proceeding } from '../types'
+import { toastError } from '../lib/toast'
 
 type ProceedingEvent = {
   dateKey: string
@@ -55,7 +56,6 @@ export default function Dashboard() {
   const [writTypeDistribution, setWritTypeDistribution] = useState<WritTypeDistribution[]>([])
   const [cityGraph, setCityGraph] = useState<FIRCityBreakdown[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [completedFIRs, setCompletedFIRs] = useState<Set<string>>(new Set())
   const [proceedingEvents, setProceedingEvents] = useState<ProceedingEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
@@ -99,6 +99,7 @@ export default function Dashboard() {
         setBranches(data)
       } catch (err) {
         console.error('Failed to load branches:', err)
+        toastError(err, 'Failed to load branches')
       }
     }
     loadBranches()
@@ -156,12 +157,11 @@ export default function Dashboard() {
         setMotionMetrics(motionData)
         setAffidavitMetrics(affidavitData)
         setWritTypeDistribution(writTypeData as WritTypeDistribution[])
-        setError(null)
       } catch (err) {
         if (!active) {
           return
         }
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+        toastError(err, 'Failed to load dashboard data')
       } finally {
         if (active) {
           setLoading(false)
@@ -542,12 +542,6 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-
-      {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
 
       {/* Top tile area with Total Writs + 6 compact tiles + Affidavit bar graph */}
       <div className="grid gap-4 lg:grid-cols-3">

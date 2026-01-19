@@ -14,6 +14,7 @@ export default function UserManagement() {
   const [filterRole, setFilterRole] = useState<UserRole | 'ALL'>('ALL')
   const [filterBranch, setFilterBranch] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [branchError, setBranchError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     email: '',
@@ -21,6 +22,18 @@ export default function UserManagement() {
     role: 'USER' as UserRole,
     branch: '',
   })
+
+  useEffect(() => {
+    if (showEditModal && selectedUser) {
+      setFormData({
+        email: selectedUser.email?.toLowerCase().trim() || selectedUser.email,
+        password: '',
+        role: selectedUser.role,
+        branch: selectedUser.branch,
+      })
+      setBranchError(null)
+    }
+  }, [showEditModal, selectedUser])
 
   useEffect(() => {
     loadUsers()
@@ -74,17 +87,27 @@ export default function UserManagement() {
 
   async function handleUpdate() {
     if (!selectedUser) return
+    if (branchError) {
+      return
+    }
     try {
       // Normalize email to lowercase - password remains case-sensitive
       const normalizedEmail = formData.email.toLowerCase().trim()
-      await updateUser(selectedUser._id, { ...formData, email: normalizedEmail })
+      const branchToSave = formData.branch || selectedUser.branch
+      await updateUser(selectedUser._id, { ...formData, branch: branchToSave, email: normalizedEmail })
       setShowEditModal(false)
       setSelectedUser(null)
       setFormData({ email: '', password: '', role: 'USER', branch: '' })
+      setBranchError(null)
       await loadUsers()
       await loadAdminCount()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user')
+      const message = err instanceof Error ? err.message : 'Failed to update user'
+      if (message.toLowerCase().includes('branch')) {
+        setBranchError(message)
+      } else {
+        setError(message)
+      }
     }
   }
 
@@ -116,7 +139,24 @@ export default function UserManagement() {
       role: user.role,
       branch: user.branch,
     })
+    setBranchError(null)
     setShowEditModal(true)
+  }
+
+  function validateBranchChange(nextBranch: string) {
+    if (!selectedUser) return
+    if (!nextBranch || nextBranch === selectedUser.branch) {
+      setBranchError(null)
+      return
+    }
+    const remainingUsersInCurrentBranch = users.filter(
+      (u) => u.branch === selectedUser.branch && u._id !== selectedUser._id
+    ).length
+    if (remainingUsersInCurrentBranch === 0) {
+      setBranchError('Cannot change branch. This is the only user for this branch.')
+    } else {
+      setBranchError(null)
+    }
   }
 
   const filteredUsers = users.filter((user) => {
@@ -374,9 +414,12 @@ export default function UserManagement() {
                 <label className="block text-sm font-medium">Branch</label>
                 <select
                   value={formData.branch}
-                  onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+                  onChange={(e) => {
+                    const nextBranch = e.target.value
+                    setFormData({ ...formData, branch: nextBranch })
+                    validateBranchChange(nextBranch)
+                  }}
                   className="w-full rounded-lg border px-3 py-2"
-                  required
                 >
                   <option value="">Select Branch</option>
                   {branches.map((branch) => (
@@ -385,6 +428,9 @@ export default function UserManagement() {
                     </option>
                   ))}
                 </select>
+                {branchError && (
+                  <p className="mt-1 text-xs text-red-600">{branchError}</p>
+                )}
               </div>
             </div>
             <div className="mt-6 flex gap-4">
@@ -392,6 +438,7 @@ export default function UserManagement() {
                 onClick={() => {
                   setShowEditModal(false)
                   setSelectedUser(null)
+                  setBranchError(null)
                 }}
                 className="flex-1 rounded-lg border px-4 py-2"
               >

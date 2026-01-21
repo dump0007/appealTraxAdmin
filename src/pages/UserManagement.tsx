@@ -96,7 +96,12 @@ export default function UserManagement() {
     try {
       // Normalize email to lowercase - password remains case-sensitive
       const normalizedEmail = formData.email.toLowerCase().trim()
-      const branchToSave = formData.branch || selectedUser.branch
+      
+      // For admins, allow empty branch; for users, preserve branch if not changed
+      const branchToSave = selectedUser.role === 'ADMIN' 
+        ? (formData.branch || '')  // Admins can explicitly set empty branch
+        : (formData.branch || selectedUser.branch)  // Users preserve branch if not provided
+      
       await updateUser(selectedUser._id, { ...formData, branch: branchToSave, email: normalizedEmail })
       setShowEditModal(false)
       setSelectedUser(null)
@@ -152,6 +157,14 @@ export default function UserManagement() {
       setBranchError(null)
       return
     }
+    
+    // Admins can be branchless or change branches freely
+    if (selectedUser.role === 'ADMIN') {
+      setBranchError(null)
+      return
+    }
+    
+    // For USER role, check if they're the only one in the branch
     const remainingUsersInCurrentBranch = users.filter(
       (u) => u.branch === selectedUser.branch && u._id !== selectedUser._id
     ).length
@@ -257,7 +270,7 @@ export default function UserManagement() {
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-4 py-2">{user.branch}</td>
+                  <td className="px-4 py-2">{user.branch || (user.role === 'ADMIN' ? '(No Branch)' : '—')}</td>
                   <td className="px-4 py-2 text-right">
                     <button
                       onClick={() => openEditModal(user)}
@@ -335,9 +348,9 @@ export default function UserManagement() {
                   value={formData.branch}
                   onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
                   className="w-full rounded-lg border px-3 py-2"
-                  required
+                  required={formData.role === 'USER'}
                 >
-                  <option value="">Select Branch</option>
+                  <option value="">{formData.role === 'ADMIN' ? 'No Branch (Admin)' : 'Select Branch'}</option>
                   {branches.map((branch) => (
                     <option key={branch} value={branch}>
                       {branch}
@@ -424,7 +437,7 @@ export default function UserManagement() {
                   }}
                   className="w-full rounded-lg border px-3 py-2"
                 >
-                  <option value="">Select Branch</option>
+                  <option value="">{formData.role === 'ADMIN' ? 'No Branch (Admin)' : 'Select Branch'}</option>
                   {branches.map((branch) => (
                     <option key={branch} value={branch}>
                       {branch}
